@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Group Chat</title>
+        <style media="screen">
+            .chatroom{
+                height: 550px;
+                border: 2px solid black;
+                width: 600px auto;
+                margin: 10px;
+                overflow: auto;
+            }
+        </style>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+        <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+        <script type ="text/javascript" src="/socket.io/socket.io.js"></script>
+        <script type="text/javascript">
+            $(document).ready(function(){
+                console.log(name)
+                // Trigger Sockets
+                var socket = io.connect();
+                var name = prompt('Your name: ');
+                // If there is no name entered into the prompt, make them a Guest.
+                if(!name){
+                    name = "Guest";
+                }
+                // Once the page loads, emit the event that is triggered ONCE the page is loaded.
+                socket.emit("page_load", {name: name});
+                // The built in .on method enables the page to always be listening when a new user loads the chatroom
+                // It will take all the messages that is stored in the message array and display onto the new user's screen
+                socket.on("load_chatroom", function(username){
+                    for(var i = 0; i < username.messages.length; i++){
+                        $('.chatroom').append("<p>" + username.messages[i][2] + ' ' + username.messages[i][0] + ": " + username.messages[i][1] + "</p>");
+                    }
+                });
+                // When a new user enters the chatroom, the following event will affect all other browsers. It lets them know a new user joined the chatroom
+                socket.on("entered_chatroom", function(name){
+                    $('.chatroom').append("<p style='color: red'>" + name.name + " has entered the chatroom</p>");
+                })
+                // Upon submitting a message, the socket handles the user and message to be displayed on ALL browsers.
+                $('button').click(function(){
+                    var today = new Date();
+                    var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+                    var time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+                    var dateTime = date+' '+time;
+                    socket.emit("submit_message", {
+                        name: name,
+                        message: $('#message').val(),
+                        date: dateTime,
+                    });
+                    // Replaces the value of the message input to be blank.
+                    $("#message").val('');
+                })
+                // Listens to the end of the socket event after a message is submitted.
+                socket.on("update_chat", function(data){
+                    $('.chatroom').append("<p>" + data.date + ' ' + data.name + ": " + data.message + "</p>");
+                })
+
+                socket.emit("disconnect")
+                socket.on("user_left", function(data){
+                    $('.chatroom').append("<p style='color: green'>" + data.name + " has left the chatroom </p>");
+                })
+            });
+        </script>
+    </head>
+    <body>
+        <h1>Coding Dojo ChatRoom!</h1>
+        <div class="chatroom"></div>
+        <div class="input-group">
+            <input type="text" class="form-control" id="message">
+            <span class="input-group-btn">
+                <button class="btn btn-default" type="button">Go!</button>
+            </span>
+        </div>
+    </body>
+</html>
